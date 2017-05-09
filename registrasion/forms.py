@@ -85,6 +85,7 @@ def ProductsForm(category, products):
         cat.RENDER_TYPE_QUANTITY: _QuantityBoxProductsForm,
         cat.RENDER_TYPE_RADIO: _RadioButtonProductsForm,
         cat.RENDER_TYPE_ITEM_QUANTITY: _ItemQuantityProductsForm,
+        cat.RENDER_TYPE_CHECKBOX: _CheckboxProductsForm,
     }
 
     # Produce a subclass of _ProductsForm which we can alter the base_fields on
@@ -238,6 +239,35 @@ class _RadioButtonProductsForm(_ProductsForm):
 
     def add_product_error(self, product, error):
         self.add_error(self.FIELD, error)
+
+
+class _CheckboxProductsForm(_ProductsForm):
+    ''' Products entry form that allows users to say yes or no
+    to desired products. Basically, it's a quantity form, but the quantity
+    is either zero or one.'''
+
+    @classmethod
+    def set_fields(cls, category, products):
+        for product in products:
+            field = forms.BooleanField(
+                label='%s -- %s' % (product.name, product.price),
+                required=False,
+            )
+            cls.base_fields[cls.field_name(product)] = field
+
+    @classmethod
+    def initial_data(cls, product_quantities):
+        initial = {}
+        for product, quantity in product_quantities:
+            initial[cls.field_name(product)] = bool(quantity)
+
+        return initial
+
+    def product_quantities(self):
+        for name, value in self.cleaned_data.items():
+            if name.startswith(self.PRODUCT_PREFIX):
+                product_id = int(name[len(self.PRODUCT_PREFIX):])
+                yield (product_id, int(value))
 
 
 class _ItemQuantityProductsForm(_ProductsForm):
