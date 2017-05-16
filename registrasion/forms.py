@@ -250,7 +250,7 @@ class _CheckboxProductsForm(_ProductsForm):
     def set_fields(cls, category, products):
         for product in products:
             field = forms.BooleanField(
-                label='%s -- %s' % (product.name, product.price),
+                label='%s -- $%s' % (product.name, product.price),
                 required=False,
             )
             cls.base_fields[cls.field_name(product)] = field
