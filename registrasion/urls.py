@@ -11,6 +11,7 @@ from .views import (
     credit_note,
     edit_profile,
     extend_reservation,
+    guided_registration,
     invoice,
     invoice_access,
     invoice_mailout,
