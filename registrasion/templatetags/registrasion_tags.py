@@ -7,6 +7,8 @@ from django.conf import settings
 from django.db.models import Sum
 from urllib import urlencode  # TODO: s/urllib/six.moves.urllib/
 
+from operator import attrgetter
+
 register = template.Library()
 
 
@@ -43,8 +45,9 @@ def missing_categories(context):
     for product, quantity in items:
         categories_held.add(product.category)
 
-    return categories_available - categories_held
+    missing = categories_available - categories_held
 
+    return sorted(set(i for i in missing), key=attrgetter("order"))
 
 @register.assignment_tag(takes_context=True)
 def available_credit(context):
