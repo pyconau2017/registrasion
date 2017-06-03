@@ -542,7 +542,8 @@ def _handle_products(request, category, products, prefix):
         # If category is required, the user must have at least one
         # in an active+valid cart
         if category.required:
-            carts = commerce.Cart.objects.filter(user=request.user)
+            carts = commerce.Cart.objects.filter(user=request.user,
+                                                 status=commerce.Cart.STATUS_ACTIVE)
             items = commerce.ProductItem.objects.filter(
                 product__category=category,
                 cart=carts,
