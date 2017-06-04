@@ -152,16 +152,16 @@ class CategoryConditionController(IsMetByFilter, ConditionController):
         product from a category invoking that item's condition in one of their
         carts. '''
 
+        active = commerce.Cart.STATUS_ACTIVE
+        paid = commerce.Cart.STATUS_PAID
         in_user_carts = Q(
-            enabling_category__product__productitem__cart__user=user
-        )
-        released = commerce.Cart.STATUS_RELEASED
-        in_released_carts = Q(
-            enabling_category__product__productitem__cart__status=released
+            enabling_category__product__productitem__cart__user=user,
+            enabling_category__product__productitem__cart__status=active
+        ) | Q(
+            enabling_category__product__productitem__cart__user=user,
+            enabling_category__product__productitem__cart__status=paid
         )
         queryset = queryset.filter(in_user_carts)
-        queryset = queryset.exclude(in_released_carts)
-
         return queryset
 
 
