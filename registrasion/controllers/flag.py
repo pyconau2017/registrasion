@@ -46,12 +46,12 @@ class FlagController(object):
             all_conditions = []
 
         all_conditions = conditions.FlagBase.objects.filter(
-            id__in=(i.id for i in all_conditions)
+            id__in=set(i.id for i in all_conditions)
         ).select_subclasses()
 
         # Prefetch all of the products and categories (Saves a LOT of queries)
         all_conditions = all_conditions.prefetch_related(
-            "products", "categories"
+            "products", "categories", "products__category",
         )
 
         # Now pre-select all of the products attached to those categories
