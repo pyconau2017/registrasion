@@ -1,4 +1,4 @@
-from reporting import views as rv
+from .reporting import views as rv
 
 from django.conf.urls import include
 from django.conf.urls import url
@@ -19,6 +19,7 @@ from .views import (
     product_category,
     refund,
     review,
+    voucher_code,
 )
 
 
@@ -41,8 +42,9 @@ public = [
         name="invoice_access"),
     url(r"^invoice_mailout$", invoice_mailout, name="invoice_mailout"),
     url(r"^profile$", edit_profile, name="attendee_edit"),
-    url(r"^register$", guided_registration, name="guided_registration"),
     url(r"^review$", review, name="review"),
+    url(r"^voucher$", voucher_code, name="voucher_code"),
+    url(r"^register$", guided_registration, name="guided_registration"),
     url(r"^register/([0-9]+)$", guided_registration,
         name="guided_registration"),
 ]
@@ -55,6 +57,11 @@ reports = [
     url(r"^attendee/([0-9]*)$", rv.attendee, name="attendee"),
     url(r"^credit_notes/?$", rv.credit_notes, name="credit_notes"),
     url(r"^manifest/?$", rv.manifest, name="manifest"),
+    url(
+        r"^product_line_items/?$",
+        rv.product_line_items,
+        name="product_line_items",
+    ),
     url(r"^discount_status/?$", rv.discount_status, name="discount_status"),
     url(r"^invoices/?$", rv.invoices, name="invoices"),
     url(

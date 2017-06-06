@@ -1,13 +1,14 @@
-from registrasion.controllers.product import ProductController
-from registrasion.models import commerce
-from registrasion.models import inventory
+from .controllers.product import ProductController
+from .models import commerce
+from .models import inventory
 
 from django import forms
-from django.core.exceptions import ValidationError
 from django.db.models import Q
 
 
 class ApplyCreditNoteForm(forms.Form):
+
+    required_css_class = 'label-required'
 
     def __init__(self, user, *a, **k):
         ''' User: The user whose invoices should be made available as
@@ -30,11 +31,13 @@ class ApplyCreditNoteForm(forms.Form):
                 "user_email": users[invoice["user_id"]].email,
             })
 
-
-        key = lambda inv: (0 - (inv["user_id"] == self.user.id), inv["id"])
+        key = lambda inv: (0 - (inv["user_id"] == self.user.id), inv["id"])  # noqa
         invoices_annotated.sort(key=key)
 
-        template = "Invoice %(id)d - user: %(user_email)s (%(user_id)d) -  $%(value)d"
+        template = (
+            'Invoice %(id)d - user: %(user_email)s (%(user_id)d) '
+            '-  $%(value)d'
+        )
         return [
             (invoice["id"], template % invoice)
             for invoice in invoices_annotated
@@ -51,13 +54,18 @@ class ApplyCreditNoteForm(forms.Form):
 
 class CancellationFeeForm(forms.Form):
 
+    required_css_class = 'label-required'
+
     percentage = forms.DecimalField(
         required=True,
         min_value=0,
         max_value=100,
     )
 
+
 class ManualCreditNoteRefundForm(forms.ModelForm):
+
+    required_css_class = 'label-required'
 
     class Meta:
         model = commerce.ManualCreditNoteRefund
@@ -65,6 +73,8 @@ class ManualCreditNoteRefundForm(forms.ModelForm):
 
 
 class ManualPaymentForm(forms.ModelForm):
+
+    required_css_class = 'label-required'
 
     class Meta:
         model = commerce.ManualPayment
@@ -85,6 +95,7 @@ def ProductsForm(category, products):
         cat.RENDER_TYPE_QUANTITY: _QuantityBoxProductsForm,
         cat.RENDER_TYPE_RADIO: _RadioButtonProductsForm,
         cat.RENDER_TYPE_ITEM_QUANTITY: _ItemQuantityProductsForm,
+        cat.RENDER_TYPE_CHECKBOX: _CheckboxProductsForm,
     }
 
     # Produce a subclass of _ProductsForm which we can alter the base_fields on
@@ -149,6 +160,9 @@ class _HasProductsFields(object):
 
 
 class _ProductsForm(_HasProductsFields, forms.Form):
+
+    required_css_class = 'label-required'
+
     pass
 
 
@@ -240,6 +254,35 @@ class _RadioButtonProductsForm(_ProductsForm):
         self.add_error(self.FIELD, error)
 
 
+class _CheckboxProductsForm(_ProductsForm):
+    ''' Products entry form that allows users to say yes or no
+    to desired products. Basically, it's a quantity form, but the quantity
+    is either zero or one.'''
+
+    @classmethod
+    def set_fields(cls, category, products):
+        for product in products:
+            field = forms.BooleanField(
+                label='%s -- $%s' % (product.name, product.price),
+                required=False,
+            )
+            cls.base_fields[cls.field_name(product)] = field
+
+    @classmethod
+    def initial_data(cls, product_quantities):
+        initial = {}
+        for product, quantity in product_quantities:
+            initial[cls.field_name(product)] = bool(quantity)
+
+        return initial
+
+    def product_quantities(self):
+        for name, value in self.cleaned_data.items():
+            if name.startswith(self.PRODUCT_PREFIX):
+                product_id = int(name[len(self.PRODUCT_PREFIX):])
+                yield (product_id, int(value))
+
+
 class _ItemQuantityProductsForm(_ProductsForm):
     ''' Products entry form that allows users to select a product type, and
      enter a quantity of that product. This version _only_ allows a single
@@ -311,6 +354,8 @@ class _ItemQuantityProductsForm(_ProductsForm):
 
 class _ItemQuantityProductsFormSet(_HasProductsFields, forms.BaseFormSet):
 
+    required_css_class = 'label-required'
+
     @classmethod
     def set_fields(cls, category, products):
         raise ValueError("set_fields must be called on the underlying Form")
@@ -376,6 +421,9 @@ class _ItemQuantityProductsFormSet(_HasProductsFields, forms.BaseFormSet):
 
 
 class VoucherForm(forms.Form):
+
+    required_css_class = 'label-required'
+
     voucher = forms.CharField(
         label="Voucher code",
         help_text="If you have a voucher code, enter it here",
@@ -407,6 +455,7 @@ def staff_products_form_factory(user):
 
     return StaffProductsForm
 
+
 def staff_products_formset_factory(user):
     ''' Creates a formset of StaffProductsForm for the given user. '''
     form_type = staff_products_form_factory(user)
@@ -414,6 +463,9 @@ def staff_products_formset_factory(user):
 
 
 class InvoicesWithProductAndStatusForm(forms.Form):
+
+    required_css_class = 'label-required'
+
     invoice = forms.ModelMultipleChoiceField(
         widget=forms.CheckboxSelectMultiple,
         queryset=commerce.Invoice.objects.all(),
@@ -428,7 +480,6 @@ class InvoicesWithProductAndStatusForm(forms.Form):
         product = [int(i) for i in product]
 
         super(InvoicesWithProductAndStatusForm, self).__init__(*a, **k)
-        print status
 
         qs = commerce.Invoice.objects.filter(
             status=status or commerce.Invoice.STATUS_UNPAID,
@@ -446,7 +497,7 @@ class InvoicesWithProductAndStatusForm(forms.Form):
         qs = qs.order_by("id")
 
         self.fields['invoice'].queryset = qs
-        #self.fields['invoice'].initial = [i.id for i in qs] # UNDO THIS LATER
+        # self.fields['invoice'].initial = [i.id for i in qs] # UNDO THIS LATER
 
 
 class InvoiceEmailForm(InvoicesWithProductAndStatusForm):

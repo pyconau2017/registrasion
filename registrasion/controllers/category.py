@@ -9,6 +9,8 @@ from django.db.models import Value
 
 from .batch import BatchController
 
+from operator import attrgetter
+
 
 class AllProducts(object):
     pass
@@ -26,7 +28,7 @@ class CategoryController(object):
         products, otherwise it'll do all. '''
 
         # STOPGAP -- this needs to be elsewhere tbqh
-        from product import ProductController
+        from .product import ProductController
 
         if products is AllProducts:
             products = inventory.Product.objects.all().select_related(
@@ -38,7 +40,7 @@ class CategoryController(object):
             products=products,
         )
 
-        return set(i.category for i in available)
+        return sorted(set(i.category for i in available), key=attrgetter("order"))
 
     @classmethod
     @BatchController.memoise
