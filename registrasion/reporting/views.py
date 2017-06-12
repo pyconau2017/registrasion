@@ -17,6 +17,7 @@ from django.shortcuts import render
 
 from registrasion.controllers.cart import CartController
 from registrasion.controllers.item import ItemController
+from registrasion.models import conditions
 from registrasion.models import commerce
 from registrasion.models import people
 from registrasion import util
@@ -238,6 +239,37 @@ def group_by_cart_status(queryset, order, values):
     )
 
     return values
+
+
+@report_view("Limits")
+def limits(request, form):
+    ''' Shows the summary of sales against stock limits. '''
+
+    line_items = commerce.LineItem.objects.filter(
+        invoice__status=commerce.Invoice.STATUS_PAID,
+    ).annotate(
+        total_quantity=Sum("quantity"),
+    )
+
+    quantities = {}
+    for line_item in line_items.all():
+        quantities[line_item.product.name] = line_item.quantity
+
+    print 'quantities', quantities
+
+    limits = conditions.TimeOrStockLimitFlag.objects.all().order_by("-limit")
+
+    headings = ["Limit", "Product", "Quantity"]
+
+    data = []
+    for limit in limits:
+        data.append([limit.description, "", limit.limit])
+        for product in limit.products.all():
+            print 'product.name', product.name
+            if product.name in quantities:
+                data.append(["", product.name, quantities[product.name]])
+
+    return ListReport("Limits", headings, data)
 
 
 @report_view("Product status", form_type=forms.ProductAndCategoryForm)

@@ -56,6 +56,7 @@ reports = [
     url(r"^attendee_data/?$", rv.attendee_data, name="attendee_data"),
     url(r"^attendee/([0-9]*)$", rv.attendee, name="attendee"),
     url(r"^credit_notes/?$", rv.credit_notes, name="credit_notes"),
+    url(r"^limits/?$", rv.limits, name="reconciliation"),
     url(r"^manifest/?$", rv.manifest, name="manifest"),
     url(
         r"^product_line_items/?$",
