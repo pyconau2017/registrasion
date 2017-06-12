@@ -259,17 +259,35 @@ def limits(request, form):
 
     limits = conditions.TimeOrStockLimitFlag.objects.all().order_by("-limit")
 
-    headings = ["Limit", "Product", "Quantity"]
+    headings = ["Product", "Quantity"]
 
-    data = []
+    reports = []
     for limit in limits:
-        data.append([limit.description, "", limit.limit])
+        data = []
+        total = 0
         for product in limit.products.all():
-            print 'product.name', product.name
             if product.name in quantities:
-                data.append(["", product.name, quantities[product.name]])
+                total += quantities[product.name]
+                data.append([product.name, quantities[product.name]])
+        if limit.limit:
+            data.append(['(TOTAL)', '%s/%s' % (total, limit.limit)])
+        else:
+            data.append(['(TOTAL)', total])
 
-    return ListReport("Limits", headings, data)
+        description = limit.description
+        extras = []
+        if limit.start_time:
+            extras.append('Starts: %s' % (limit.start_time))
+
+        if limit.end_time:
+            extras.append('Ends: %s' % (limit.end_time))
+
+        if extras:
+            description += ' (' + ', '.join(extras) + ')'
+
+        reports.append(ListReport(description, headings, data))
+
+    return reports
 
 
 @report_view("Product status", form_type=forms.ProductAndCategoryForm)
