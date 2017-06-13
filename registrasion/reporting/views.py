@@ -247,13 +247,15 @@ def limits(request, form):
 
     line_items = commerce.LineItem.objects.filter(
         invoice__status=commerce.Invoice.STATUS_PAID,
+    ).values(
+        "product", "product__name",
     ).annotate(
-        total_quantity=Sum("quantity"),
-    )
+        total_quantity=Sum("quantity")
+    ).order_by("product")
 
     quantities = {}
     for line_item in line_items.all():
-        quantities[line_item.product.name] = line_item.quantity
+        quantities[line_item['product__name']] = line_item['total_quantity']
 
     limits = conditions.TimeOrStockLimitFlag.objects.all().order_by("-limit")
 
