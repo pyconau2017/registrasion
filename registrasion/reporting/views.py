@@ -17,6 +17,7 @@ from django.shortcuts import render
 
 from registrasion.controllers.cart import CartController
 from registrasion.controllers.item import ItemController
+from registrasion.models import conditions
 from registrasion.models import commerce
 from registrasion.models import people
 from registrasion import util
@@ -238,6 +239,53 @@ def group_by_cart_status(queryset, order, values):
     )
 
     return values
+
+
+@report_view("Limits")
+def limits(request, form):
+    ''' Shows the summary of sales against stock limits. '''
+
+    line_items = commerce.LineItem.objects.filter(
+        invoice__status=commerce.Invoice.STATUS_PAID,
+    ).annotate(
+        total_quantity=Sum("quantity"),
+    )
+
+    quantities = {}
+    for line_item in line_items.all():
+        quantities[line_item.product.name] = line_item.quantity
+
+    limits = conditions.TimeOrStockLimitFlag.objects.all().order_by("-limit")
+
+    headings = ["Product", "Quantity"]
+
+    reports = []
+    for limit in limits:
+        data = []
+        total = 0
+        for product in limit.products.all():
+            if product.name in quantities:
+                total += quantities[product.name]
+                data.append([product.name, quantities[product.name]])
+        if limit.limit:
+            data.append(['(TOTAL)', '%s/%s' % (total, limit.limit)])
+        else:
+            data.append(['(TOTAL)', total])
+
+        description = limit.description
+        extras = []
+        if limit.start_time:
+            extras.append('Starts: %s' % (limit.start_time))
+
+        if limit.end_time:
+            extras.append('Ends: %s' % (limit.end_time))
+
+        if extras:
+            description += ' (' + ', '.join(extras) + ')'
+
+        reports.append(ListReport(description, headings, data))
+
+    return reports
 
 
 @report_view("Product status", form_type=forms.ProductAndCategoryForm)
