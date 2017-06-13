@@ -255,8 +255,6 @@ def limits(request, form):
     for line_item in line_items.all():
         quantities[line_item.product.name] = line_item.quantity
 
-    print 'quantities', quantities
-
     limits = conditions.TimeOrStockLimitFlag.objects.all().order_by("-limit")
 
     headings = ["Product", "Quantity"]
