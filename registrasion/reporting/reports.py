@@ -122,7 +122,6 @@ class ListReport(BasicReport):
             ]
 
     def count(self):
-        print 'hi', len(self._data)
         return len(self._data)
 
 
