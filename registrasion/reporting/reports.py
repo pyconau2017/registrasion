@@ -75,6 +75,9 @@ class _ReportTemplateWrapper(object):
     def rows(self):
         return self.report.rows(self.content_type)
 
+    def count(self):
+        return self.report.count()
+
 
 class BasicReport(Report):
 
@@ -118,6 +121,10 @@ class ListReport(BasicReport):
                 for i, cell in enumerate(row)
             ]
 
+    def count(self):
+        print 'hi', len(self._data)
+        return len(self._data)
+
 
 class QuerysetReport(BasicReport):
 
@@ -158,6 +165,10 @@ class QuerysetReport(BasicReport):
             ]
 
 
+    def count(self):
+        return self._queryset.count()
+
+
 class Links(Report):
 
     def __init__(self, title, links):
@@ -182,6 +193,8 @@ class Links(Report):
                 self._linked_text(content_type, url, link_text)
             ]
 
+    def count(self):
+        return len(self._links)
 
 def report_view(title, form_type=None):
     ''' Decorator that converts a report view function into something that
