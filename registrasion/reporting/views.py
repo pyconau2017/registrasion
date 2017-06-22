@@ -253,9 +253,9 @@ def limits(request, form):
         total_quantity=Sum("quantity")
     )
 
-    quantities = {}
+    quantities = collections.defaultdict(int)
     for line_item in line_items.all():
-        quantities[line_item['product__name']] = line_item['total_quantity']
+        quantities[line_item['product__name']] += line_item['total_quantity']
 
     limits = conditions.TimeOrStockLimitFlag.objects.all().order_by("-limit")
 
@@ -286,6 +286,34 @@ def limits(request, form):
             description += ' (' + ', '.join(extras) + ')'
 
         reports.append(ListReport(description, headings, data))
+
+    # now get discount items
+    discount_items = conditions.DiscountBase.objects.select_subclasses()
+
+    data = []
+    for discount in discount_items.all():
+        quantity = 0
+        for item in discount.discountitem_set.filter(cart__status=2):
+            quantity += item.quantity
+
+        description = discount.description
+        extras = []
+        if getattr(discount, 'start_time', None):
+            extras.append('Starts: %s' % (discount.start_time))
+
+        if getattr(discount, 'end_time', None):
+            extras.append('Ends: %s' % (discount.end_time))
+
+        if extras:
+            description += ' (' + ', '.join(extras) + ')'
+
+        if getattr(discount, 'limit', None):
+            data.append([description, '%s/%s' % (quantity, discount.limit)])
+        else:
+            data.append([description, quantity])
+
+    headings = ["Discount", "Quantity"]
+    reports.append(ListReport('Discounts', headings, data))
 
     return reports
 
