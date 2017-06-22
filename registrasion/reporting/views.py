@@ -245,13 +245,13 @@ def group_by_cart_status(queryset, order, values):
 def limits(request, form):
     ''' Shows the summary of sales against stock limits. '''
 
-    line_items = commerce.LineItem.objects.filter(
-        invoice__status=commerce.Invoice.STATUS_PAID,
+    line_items = commerce.ProductItem.objects.filter(
+        cart__status=commerce.Invoice.STATUS_PAID,
     ).values(
         "product", "product__name",
     ).annotate(
         total_quantity=Sum("quantity")
-    ).order_by("product")
+    )
 
     quantities = {}
     for line_item in line_items.all():
