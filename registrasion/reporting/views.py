@@ -760,6 +760,7 @@ def attendee_data(request, form, user_id=None):
     category = product + "__category"
     category_name = category + "__name"
 
+
     if by_category:
         grouping_fields = (category, category_name)
         order_by = (category, )
