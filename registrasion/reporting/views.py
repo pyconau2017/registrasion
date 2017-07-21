@@ -13,6 +13,7 @@ from django.db.models import F, Q
 from django.db.models import Count, Max, Sum
 from django.db.models import Case, When, Value
 from django.db.models.fields.related import RelatedField
+from django.db.models.fields import CharField
 from django.shortcuts import render
 
 from registrasion.controllers.cart import CartController
@@ -31,6 +32,7 @@ from .reports import ListReport
 from .reports import QuerysetReport
 from .reports import report_view
 
+import bleach
 
 def CURRENCY():
     return models.DecimalField(decimal_places=2)
@@ -567,6 +569,8 @@ def attendee(request, form, user_id=None):
 
         if isinstance(field, models.ManyToManyField):
             value = ", ".join(str(i) for i in value.all())
+        elif isinstance(field, CharField):
+            value = bleach.clean(value)
 
         profile_data.append((field.verbose_name, value))
 
@@ -790,7 +794,7 @@ def attendee_data(request, form, user_id=None):
                     return None
         else:
             def display_field(value):
-                return value
+                return bleach.clean(value)
 
         status_count = lambda status: Case(When(  # noqa
                 attendee__user__cart__status=status,
@@ -837,7 +841,7 @@ def attendee_data(request, form, user_id=None):
         if isinstance(field_type, models.ManyToManyField):
             return [str(i) for i in attr.all()] or ""
         else:
-            return attr
+            return bleach.clean(attr)
 
     headings = ["User ID", "Name", "Email", "Product", "Item Status"]
     headings.extend(field_names)
