@@ -409,7 +409,7 @@ def product_line_items(request, form):
         "user",
         "user__attendee",
         "user__attendee__attendeeprofilebase"
-    ).order_by("issue_time")
+    ).order_by("issue_time").distinct()
 
     headings = [
         'Invoice', 'Invoice Date', 'Attendee', 'Qty', 'Product', 'Status'
@@ -466,7 +466,7 @@ def paid_invoices_by_date(request, form):
     )
 
     # Zero-value invoices will have no payments, so they're paid at issue time
-    zero_value_invoices = invoices.filter(value=0)
+    zero_value_invoices = invoices.filter(value=0).distinct()
 
     times = itertools.chain(
         (line["max_time"] for line in invoice_max_time),
