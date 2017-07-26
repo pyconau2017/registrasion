@@ -550,8 +550,7 @@ def _handle_products(request, category, products, prefix):
                 product__category=category,
                 cart=current_cart.cart,
             )
-            import pdb
-            pdb.set_trace()
+
             if len(items) == 0:
                 products_form.add_error(
                     None,
