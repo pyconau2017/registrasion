@@ -54,10 +54,10 @@ class CartController(object):
         if there isn't one ready yet. '''
 
         try:
-            existing = commerce.Cart.objects.get(
+            existing = commerce.Cart.objects.filter(
                 user=user,
                 status=commerce.Cart.STATUS_ACTIVE,
-            )
+            ).order_by('-time_last_updated').first()
         except ObjectDoesNotExist:
             existing = commerce.Cart.objects.create(
                 user=user,
