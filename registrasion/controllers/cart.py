@@ -9,7 +9,7 @@ import datetime
 import functools
 import itertools
 
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max
@@ -53,17 +53,28 @@ class CartController(object):
         ''' Returns the user's current cart, or creates a new cart
         if there isn't one ready yet. '''
 
+
         try:
-            existing = commerce.Cart.objects.filter(
+            existing = commerce.Cart.objects.get(
                 user=user,
                 status=commerce.Cart.STATUS_ACTIVE,
-            ).order_by('-time_last_updated').first()
+            )
+
         except ObjectDoesNotExist:
             existing = commerce.Cart.objects.create(
                 user=user,
                 time_last_updated=timezone.now(),
                 reservation_duration=datetime.timedelta(),
             )
+
+        except MultipleObjectsReturned:
+            # Get the one that looks "newest".
+            existing = commerce.Cart.objects.filter(
+                user=user,
+                status=commerce.Cart.STATUS_ACTIVE,
+            ).order_by('-time_last_updated').first()
+
+
         return cls(existing)
 
     def _fail_if_cart_is_not_active(self):
