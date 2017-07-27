@@ -544,18 +544,19 @@ def attendee(request, form, user_id=None):
     if user_id is None:
         return attendee_list(request)
 
-    attendee = people.Attendee.objects.get(user__id=user_id)
-    name = attendee.attendeeprofilebase.attendee_name()
-
     reports = []
 
     profile_data = []
     try:
+        attendee = people.Attendee.objects.get(user__id=user_id)
+        name = attendee.attendeeprofilebase.attendee_name()
+
         profile = people.AttendeeProfileBase.objects.get_subclass(
             attendee=attendee
         )
         fields = profile._meta.get_fields()
     except people.AttendeeProfileBase.DoesNotExist:
+        name = attendee.user.username
         fields = []
 
     exclude = set(["attendeeprofilebase_ptr", "id"])
@@ -575,7 +576,11 @@ def attendee(request, form, user_id=None):
         profile_data.append((field.verbose_name, value))
 
     cart = CartController.for_user(attendee.user)
-    reservation = cart.cart.reservation_duration + cart.cart.time_last_updated
+    try:
+        reservation = cart.cart.reservation_duration + cart.cart.time_last_updated
+    except AttributeError:  # No reservation_duration set -- default to 24h
+        reservation = datetime.datetime.now() + datetime.timedelta(hours=24)
+
     profile_data.append(("Current cart reserved until", reservation))
 
     reports.append(ListReport("Profile", ["", ""], profile_data))
@@ -597,53 +602,65 @@ def attendee(request, form, user_id=None):
     reports.append(Links("Actions for " + name, links))
 
     # Paid and pending  products
-    ic = ItemController(attendee.user)
-    reports.append(ListReport(
-        "Paid Products",
-        ["Product", "Quantity"],
-        [(pq.product, pq.quantity) for pq in ic.items_purchased()],
-    ))
-    reports.append(ListReport(
-        "Unpaid Products",
-        ["Product", "Quantity"],
-        [(pq.product, pq.quantity) for pq in ic.items_pending()],
-    ))
+    try:
+        ic = ItemController(attendee.user)
+        reports.append(ListReport(
+            "Paid Products",
+            ["Product", "Quantity"],
+            [(pq.product, pq.quantity) for pq in ic.items_purchased()],
+        ))
+        reports.append(ListReport(
+            "Unpaid Products",
+            ["Product", "Quantity"],
+            [(pq.product, pq.quantity) for pq in ic.items_pending()],
+        ))
+    except AttributeError:
+        pass
 
     # Invoices
-    invoices = commerce.Invoice.objects.filter(
-        user=attendee.user,
-    )
-    reports.append(QuerysetReport(
-        "Invoices",
-        ["id", "get_status_display", "value"],
-        invoices,
-        headings=["Invoice ID", "Status", "Value"],
-        link_view=views.invoice,
-    ))
+    try:
+        invoices = commerce.Invoice.objects.filter(
+            user=attendee.user,
+        )
+        reports.append(QuerysetReport(
+            "Invoices",
+            ["id", "get_status_display", "value"],
+            invoices,
+            headings=["Invoice ID", "Status", "Value"],
+            link_view=views.invoice,
+        ))
+    except AttrbuteError:
+        pass
 
     # Credit Notes
-    credit_notes = commerce.CreditNote.objects.filter(
-        invoice__user=attendee.user,
-    ).select_related("invoice", "creditnoteapplication", "creditnoterefund")
+    try:
+        credit_notes = commerce.CreditNote.objects.filter(
+            invoice__user=attendee.user,
+        ).select_related("invoice", "creditnoteapplication", "creditnoterefund")
 
-    reports.append(QuerysetReport(
-        "Credit Notes",
-        ["id", "status", "value"],
-        credit_notes,
-        link_view=views.credit_note,
-    ))
+        reports.append(QuerysetReport(
+            "Credit Notes",
+            ["id", "status", "value"],
+            credit_notes,
+            link_view=views.credit_note,
+        ))
+    except AttributeError:
+        pass
 
     # All payments
-    payments = commerce.PaymentBase.objects.filter(
-        invoice__user=attendee.user,
-    ).select_related("invoice")
+    try:
+        payments = commerce.PaymentBase.objects.filter(
+            invoice__user=attendee.user,
+        ).select_related("invoice")
 
-    reports.append(QuerysetReport(
-        "Payments",
-        ["invoice__id", "id", "reference", "amount"],
-        payments,
-        link_view=views.invoice,
-    ))
+        reports.append(QuerysetReport(
+            "Payments",
+            ["invoice__id", "id", "reference", "amount"],
+            payments,
+            link_view=views.invoice,
+        ))
+    except AttributeError:
+        pass
 
     return reports
 

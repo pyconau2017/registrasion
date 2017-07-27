@@ -548,8 +548,9 @@ def _handle_products(request, category, products, prefix):
                                                  status=commerce.Cart.STATUS_ACTIVE)
             items = commerce.ProductItem.objects.filter(
                 product__category=category,
-                cart=carts,
+                cart=current_cart.cart,
             )
+
             if len(items) == 0:
                 products_form.add_error(
                     None,
