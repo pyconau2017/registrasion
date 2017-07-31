@@ -53,10 +53,12 @@ def __send_email__(template_prefix, to, kind, **kwargs):
 
     from_email = settings.DEFAULT_FROM_EMAIL
 
+    bcc_email = kwargs.get('bcc', list())
+
     try:
-        bcc_email = settings.ENVELOPE_BCC_LIST
+        bcc_email.extend(settings.ENVELOPE_BCC_LIST)
     except AttributeError:
-        bcc_email = None
+        pass
 
     email = EmailMultiAlternatives(
         subject,
