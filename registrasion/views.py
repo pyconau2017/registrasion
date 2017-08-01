@@ -1164,7 +1164,7 @@ def render_badge(request):
         pass
 
     # Free text -- only one line ... come on!
-    data['line1'] = form.data['free_text_2']
+    data['line1'] = form.data['free_text_1']
     data['line2'] = form.data['free_text_2']
 
     # Email ...
@@ -1178,10 +1178,12 @@ def render_badge(request):
 
     # Lots booleans ...
     for key in ['over18', 'speaker', 'paid', 'friday',
-                'sprints', 'tutorial', 'volunteer',]:
+                'sprints', 'tutorial', 'company',]:
         data[key] = form.data.get(key, False)
 
     data['ticket'] = ticket_selection()[int(form.data['ticket'])][1]
+
+    data['volunteer'] = data['ticket'].find("Volunteer") >= 0
 
     if 'Specialist Day Only' in data['ticket']:
         data['ticket'] = 'Friday Only'
@@ -1198,9 +1200,6 @@ def render_badge(request):
         'Contributor' in data['ticket'] or
         'Professional' in data['ticket']
     )
-
-    import pdb
-    pdb.set_trace()
 
     # Generate the badge (svg)
     svg_badge(root, data, 0)

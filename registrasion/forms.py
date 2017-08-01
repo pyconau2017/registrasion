@@ -548,8 +548,5 @@ class BadgeForm(forms.Form):
     conference = forms.BooleanField(label="Conference Ticket", required=False)
     tutorial = forms.BooleanField(label="Tutorial Ticket", required=False)
     friday = forms.BooleanField(label="Specialist Day", required=False)
-    sprints = forms.BooleanField(label="Sprins", required=False)
-
-    # Deliberately not letting people create organiser badges.
-    volunteer = forms.BooleanField(label="Volunteer", required=False)
+    sprints = forms.BooleanField(label="Sprints", required=False)
 
