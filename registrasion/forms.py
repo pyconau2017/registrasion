@@ -521,3 +521,19 @@ class InvoiceEmailForm(InvoicesWithProductAndStatusForm):
         choices=ACTION_CHOICES,
         initial=ACTION_PREVIEW,
     )
+
+
+
+class BadgeForm(forms.Form):
+    '''
+    A form for creating one-off badges at rego desk.
+    '''
+    required_css_class = 'label-required'
+
+    name = forms.CharField(label="Name", max_length=60)
+    company = forms.CharField(label="Company", max_length=60)
+    free_text = forms.CharField(label="FT", max_length=60)
+    attendee_type = forms.ChoiceField(label="Attendee Level",
+                    choices=enumerate(list(set([p.name.split()[-1] for p in inventory.Product.objects.filter(category__name__contains="Conference")]))))
+    ticket_type = forms.ChoiceField(label="Ticket",
+                                    choices=enumerate(list(set([p.category.name for p in inventory.Product.objects.filter(category__name__contains="Ticket")]))))

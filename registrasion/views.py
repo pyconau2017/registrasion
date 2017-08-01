@@ -1139,3 +1139,14 @@ def render_badge(user):
 
     t = loader.get_template('registrasion/badge.svg')
     return t.render(data)
+
+
+from registrasion.forms import BadgeForm
+
+def badger(request):
+    '''
+    Puts up a create one-off badge form.
+    '''
+
+    form = BadgeForm
+    return render(request, "registrasion/badge_form.html", {'form': form})
