@@ -1091,7 +1091,12 @@ def _get_badge_template_name():
 
 @user_passes_test(_staff_only)
 def badge(request, user_id):
-    ''' Renders a single user's badge (SVG). '''
+    '''
+    Renders a single user's badge (SVG).
+
+    This does little more than call Richard Jones' collate and svg_badge
+    functions found in generate_badges.
+    '''
 
     user_id = int(user_id)
     user = User.objects.get(pk=user_id)
@@ -1112,7 +1117,10 @@ def badge(request, user_id):
 
 
 def badges(request):
-    ''' Either displays a form containing a list of users with badges to
+    '''
+    *** NOT USED FOR PYCONAU 2017 MELBOURNE ***
+
+    Either displays a form containing a list of users with badges to
     render, or returns a .zip file containing their badges. '''
 
     category = request.GET.getlist("category", [])
@@ -1149,7 +1157,12 @@ def badges(request):
 
 @user_passes_test(_staff_only)
 def badger(request):
-    ''' Renders a single user's badge. '''
+    '''
+    Renders a single user's badge from data supplied on
+    a form rather than from Attendee data.  This is nearly
+    identical to what Richard Jones' ``collate`` function does,
+    but with form data instead of Attendee data.
+    '''
 
     form = BadgeForm(request.POST)
 
