@@ -545,8 +545,6 @@ class BadgeForm(forms.Form):
     paid = forms.BooleanField(label="Paid", required=False)
     over18 = forms.BooleanField(label="Over 18", required=False)
     speaker = forms.BooleanField(label="Speaker", required=False)
-    conference = forms.BooleanField(label="Conference Ticket", required=False)
     tutorial = forms.BooleanField(label="Tutorial Ticket", required=False)
     friday = forms.BooleanField(label="Specialist Day", required=False)
     sprints = forms.BooleanField(label="Sprints", required=False)
-

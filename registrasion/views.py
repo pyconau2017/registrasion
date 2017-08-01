@@ -33,6 +33,13 @@ from django.shortcuts import redirect
 from django.shortcuts import render
 from django.template import Context, Template, loader
 
+from lxml import etree
+from copy import deepcopy
+
+from registrasion.forms import BadgeForm, ticket_selection
+from registrasion.generate_badges import *
+
+
 
 _GuidedRegistrationSection = namedtuple(
     "GuidedRegistrationSection",
@@ -1079,6 +1086,8 @@ def invoice_mailout(request):
 
     return render(request, "registrasion/invoice_mailout.html", data)
 
+def _get_badge_template_name():
+    return os.path.join(settings.PROJECT_ROOT, 'pinaxcon', 'templates', 'badge.svg')
 
 @user_passes_test(_staff_only)
 def badge(request, user_id):
@@ -1087,9 +1096,16 @@ def badge(request, user_id):
     user_id = int(user_id)
     user = User.objects.get(pk=user_id)
 
-    rendered = render_badge(user)
-    response = HttpResponse(rendered)
+    # This will fail spectacularly -- will put exception handling in later ...
+    user_data = list(collate({'usernames': [user.username]}))[0]
 
+    orig = etree.parse(_get_badge_template_name())
+    tree = deepcopy(orig)
+    root = tree.getroot()
+
+    svg_badge(root, user_data, 0)
+
+    response = HttpResponse(etree.tostring(root))
     response["Content-Type"] = "image/svg+xml"
     response["Content-Disposition"] = 'inline; filename="badge.svg"'
     return response
@@ -1130,24 +1146,23 @@ def badges(request):
 
     return render(request, "registrasion/badges.html", data)
 
-from lxml import etree
-from copy import deepcopy
 
-from registrasion.forms import BadgeForm, ticket_selection
-
-from registrasion.generate_badges import *
-
-
-def render_badge(request):
+@user_passes_test(_staff_only)
+def badger(request):
     ''' Renders a single user's badge. '''
 
-    orig = etree.parse(os.path.join(settings.PROJECT_ROOT, 'pinaxcon', 'templates', 'badge.svg'))
+    form = BadgeForm(request.POST)
+
+    if len(form.data) == 0:
+        return render(request, "registrasion/badge_form.html", {'form': BadgeForm})
+
+    if not form.is_valid():
+       return render(request, "registrasion/badge_form.html", {'form': form})
+
+    orig = etree.parse(_get_badge_template_name())
     tree = deepcopy(orig)
     root = tree.getroot()
 
-    form = BadgeForm(request.POST)
-    if not form.is_valid():
-        return badger(request)
 
     # Build the thing we'll pass to svg_badge() later.
     data = dict()
@@ -1177,16 +1192,22 @@ def render_badge(request):
     data['shirts'] = list()
 
     # Lots booleans ...
-    for key in ['over18', 'speaker', 'paid', 'friday',
-                'sprints', 'tutorial', 'company',]:
+    for key in ['over18', 'paid', 'friday', 'speaker', 'tutorial',
+                'sprints', 'company',]:
         data[key] = form.data.get(key, False)
 
     data['ticket'] = ticket_selection()[int(form.data['ticket'])][1]
+
+    # Make sure this is a valid ticket!
+    if data['ticket'].find("!!!") >= 0:
+        form.add_error('ticket', 'Please select a VALID ticket type!')
+        return render(request, "registrasion/badge_form.html", {'form': form})
 
     data['volunteer'] = data['ticket'].find("Volunteer") >= 0
 
     if 'Specialist Day Only' in data['ticket']:
         data['ticket'] = 'Friday Only'
+        data['friday'] = True
 
     if 'Conference Organiser' in data['ticket']:
         data['ticket'] = ''
@@ -1210,15 +1231,3 @@ def render_badge(request):
     response["Content-Type"] = "image/svg+xml"
     response["Content-Disposition"] = 'inline; filename="badge.svg"'
     return response
-
-
-
-
-
-def badger(request):
-    '''
-    Puts up a create one-off badge form.
-    '''
-
-    form = BadgeForm
-    return render(request, "registrasion/badge_form.html", {'form': form})
