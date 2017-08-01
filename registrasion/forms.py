@@ -524,16 +524,32 @@ class InvoiceEmailForm(InvoicesWithProductAndStatusForm):
 
 
 
+def ticket_selection():
+   return list(enumerate(['!!! NOT A VALID TICKET !!!'] + [p.name for p in inventory.Product.objects.filter(category__name__contains="Ticket").exclude(name__contains="Organiser").order_by('id')]))
+
+
 class BadgeForm(forms.Form):
     '''
     A form for creating one-off badges at rego desk.
     '''
     required_css_class = 'label-required'
 
-    name = forms.CharField(label="Name", max_length=60)
-    company = forms.CharField(label="Company", max_length=60)
-    free_text = forms.CharField(label="FT", max_length=60)
-    attendee_type = forms.ChoiceField(label="Attendee Level",
-                    choices=enumerate(list(set([p.name.split()[-1] for p in inventory.Product.objects.filter(category__name__contains="Conference")]))))
-    ticket_type = forms.ChoiceField(label="Ticket",
-                                    choices=enumerate(list(set([p.category.name for p in inventory.Product.objects.filter(category__name__contains="Ticket")]))))
+    name = forms.CharField(label="Name", max_length=60, required=True)
+    email = forms.EmailField(label="Email", max_length=60, required=False)
+    company = forms.CharField(label="Company", max_length=60, required=False)
+    free_text_1 = forms.CharField(label="Free Text", max_length=60, required=False)
+    free_text_2 = forms.CharField(label="Free Text", max_length=60, required=False)
+
+    ticket = forms.ChoiceField(label="Select a Ticket", choices=ticket_selection)
+
+    paid = forms.BooleanField(label="Paid", required=False)
+    over18 = forms.BooleanField(label="Over 18", required=False)
+    speaker = forms.BooleanField(label="Speaker", required=False)
+    conference = forms.BooleanField(label="Conference Ticket", required=False)
+    tutorial = forms.BooleanField(label="Tutorial Ticket", required=False)
+    friday = forms.BooleanField(label="Specialist Day", required=False)
+    sprints = forms.BooleanField(label="Sprins", required=False)
+
+    # Deliberately not letting people create organiser badges.
+    volunteer = forms.BooleanField(label="Volunteer", required=False)
+

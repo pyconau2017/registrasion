@@ -1,5 +1,6 @@
 import datetime
 import zipfile
+import os
 
 from . import forms
 from . import util
@@ -1129,19 +1130,91 @@ def badges(request):
 
     return render(request, "registrasion/badges.html", data)
 
+from lxml import etree
+from copy import deepcopy
 
-def render_badge(user):
+from registrasion.forms import BadgeForm, ticket_selection
+
+from registrasion.generate_badges import *
+
+
+def render_badge(request):
     ''' Renders a single user's badge. '''
 
-    data = {
-        "user": user,
-    }
+    orig = etree.parse(os.path.join(settings.PROJECT_ROOT, 'pinaxcon', 'templates', 'badge.svg'))
+    tree = deepcopy(orig)
+    root = tree.getroot()
 
-    t = loader.get_template('registrasion/badge.svg')
-    return t.render(data)
+    form = BadgeForm(request.POST)
+    if not form.is_valid():
+        return badger(request)
+
+    # Build the thing we'll pass to svg_badge() later.
+    data = dict()
+
+    # Get the name bits ...
+    at_nm = form.data['name'].split()
+    if at_nm[0].lower() in 'mr dr ms mrs miss'.split():
+        at_nm[0] = at_nm[0] + ' ' + at_nm[1]
+        del at_nm[1]
+    if at_nm:
+        data['firstname'] = at_nm[0]
+        data['lastname'] = ''.join(at_nm[1:])
+    else:  # Can't happen -- form validator will check for this.
+        pass
+
+    # Free text -- only one line ... come on!
+    data['line1'] = form.data['free_text_2']
+    data['line2'] = form.data['free_text_2']
+
+    # Email ...
+    data['email'] = form.data['email']
+
+    # Don't think we want to allow ad hoc organiser tickets ...
+    data['organiser'] = False
+
+    # Punt on shirts for now ...
+    data['shirts'] = list()
+
+    # Lots booleans ...
+    for key in ['over18', 'speaker', 'paid', 'friday',
+                'sprints', 'tutorial', 'volunteer',]:
+        data[key] = form.data.get(key, False)
+
+    data['ticket'] = ticket_selection()[int(form.data['ticket'])][1]
+
+    if 'Specialist Day Only' in data['ticket']:
+        data['ticket'] = 'Friday Only'
+
+    if 'Conference Organiser' in data['ticket']:
+        data['ticket'] = ''
+
+    if 'Conference Volunteer' in data['ticket']:
+        data['ticket'] = ''
+
+    data['promote_company'] = (
+        data['organiser'] or data['volunteer'] or data['speaker'] or
+        'Sponsor' in data['ticket'] or
+        'Contributor' in data['ticket'] or
+        'Professional' in data['ticket']
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    # Generate the badge (svg)
+    svg_badge(root, data, 0)
+
+    # Ship it back to the user...
+    response = HttpResponse(etree.tostring(root))
+
+    response["Content-Type"] = "image/svg+xml"
+    response["Content-Disposition"] = 'inline; filename="badge.svg"'
+    return response
 
 
-from registrasion.forms import BadgeForm
+
+
 
 def badger(request):
     '''
