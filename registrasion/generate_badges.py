@@ -1,1 +1,1 @@
-../../../pinaxcon/registrasion/management/commands/generate_badges.py
+../../../website/pinaxcon/registrasion/management/commands/generate_badges.py
