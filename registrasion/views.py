@@ -1194,11 +1194,6 @@ def collate_from_form(form):
 
     data['ticket'] = ticket_selection()[int(form.data['ticket'])][1]
 
-    # Make sure this is a valid ticket!
-    if data['ticket'].find("!!!") >= 0:
-        form.add_error('ticket', 'Please select a VALID ticket type!')
-        return render(request, "registrasion/badge_form.html", {'form': form})
-
     data['volunteer'] = data['ticket'].find("Volunteer") >= 0
 
     if 'Specialist Day Only' in data['ticket']:
@@ -1254,7 +1249,6 @@ def badger(request, username=None):
     orig = etree.parse(_get_badge_template_name())
     tree = deepcopy(orig)
     root = tree.getroot()
-
 
     # Generate the badge (svg)
     svg_badge(root, data, 0)

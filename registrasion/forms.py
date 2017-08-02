@@ -548,3 +548,16 @@ class BadgeForm(forms.Form):
     tutorial = forms.BooleanField(label="Tutorial Ticket", required=False)
     friday = forms.BooleanField(label="Specialist Day", required=False)
     sprints = forms.BooleanField(label="Sprints", required=False)
+
+
+    def is_valid(self):
+        valid = super(BadgeForm, self).is_valid()
+
+        if not valid:
+            return valid
+
+        if self.data['ticket'] == '0':  # Invalid ticket type!
+            self.add_error('ticket', 'Please select a VALID ticket type.')
+            return False
+
+        return True
