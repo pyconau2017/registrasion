@@ -1,5 +1,6 @@
 import datetime
 import zipfile
+import os
 
 from . import forms
 from . import util
@@ -31,6 +32,13 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.template import Context, Template, loader
+
+from lxml import etree
+from copy import deepcopy
+
+from registrasion.forms import BadgeForm, ticket_selection
+from registrasion.generate_badges import *
+
 
 
 _GuidedRegistrationSection = namedtuple(
@@ -1078,24 +1086,41 @@ def invoice_mailout(request):
 
     return render(request, "registrasion/invoice_mailout.html", data)
 
+def _get_badge_template_name():
+    return os.path.join(settings.PROJECT_ROOT, 'pinaxcon', 'templates', 'badge.svg')
 
 @user_passes_test(_staff_only)
 def badge(request, user_id):
-    ''' Renders a single user's badge (SVG). '''
+    '''
+    Renders a single user's badge (SVG).
+
+    This does little more than call Richard Jones' collate and svg_badge
+    functions found in generate_badges.
+    '''
 
     user_id = int(user_id)
     user = User.objects.get(pk=user_id)
 
-    rendered = render_badge(user)
-    response = HttpResponse(rendered)
+    # This will fail spectacularly -- will put exception handling in later ...
+    user_data = list(collate({'usernames': [user.username]}))[0]
 
+    orig = etree.parse(_get_badge_template_name())
+    tree = deepcopy(orig)
+    root = tree.getroot()
+
+    svg_badge(root, user_data, 0)
+
+    response = HttpResponse(etree.tostring(root))
     response["Content-Type"] = "image/svg+xml"
     response["Content-Disposition"] = 'inline; filename="badge.svg"'
     return response
 
 
 def badges(request):
-    ''' Either displays a form containing a list of users with badges to
+    '''
+    *** NOT USED FOR PYCONAU 2017 MELBOURNE ***
+
+    Either displays a form containing a list of users with badges to
     render, or returns a .zip file containing their badges. '''
 
     category = request.GET.getlist("category", [])
@@ -1130,12 +1155,113 @@ def badges(request):
     return render(request, "registrasion/badges.html", data)
 
 
-def render_badge(user):
-    ''' Renders a single user's badge. '''
+def collate_from_form(form):
+    '''
+    Does what collate does, but using form data as its input source
+    rather than User record.
+    '''
+        # Build the thing we'll pass to svg_badge() later.
+    data = dict()
 
-    data = {
-        "user": user,
-    }
+    # Get the name bits ...
+    at_nm = form.data['name'].split()
+    if at_nm[0].lower() in 'mr dr ms mrs miss'.split():
+        at_nm[0] = at_nm[0] + ' ' + at_nm[1]
+        del at_nm[1]
+    if at_nm:
+        data['firstname'] = at_nm[0]
+        data['lastname'] = ''.join(at_nm[1:])
+    else:  # Can't happen -- form validator will check for this.
+        pass
 
-    t = loader.get_template('registrasion/badge.svg')
-    return t.render(data)
+    # Free text -- only one line ... come on!
+    data['line1'] = form.data['free_text_1']
+    data['line2'] = form.data['free_text_2']
+
+    # Email ...
+    data['email'] = form.data['email']
+
+    # Don't think we want to allow ad hoc organiser tickets ...
+    data['organiser'] = False
+
+    # Punt on shirts for now ...
+    data['shirts'] = list()
+
+    # Lots booleans ...
+    for key in ['over18', 'paid', 'friday', 'speaker', 'tutorial',
+                'sprints', 'company',]:
+        data[key] = form.data.get(key, False)
+
+    data['ticket'] = ticket_selection()[int(form.data['ticket'])][1]
+
+    # Make sure this is a valid ticket!
+    if data['ticket'].find("!!!") >= 0:
+        form.add_error('ticket', 'Please select a VALID ticket type!')
+        return render(request, "registrasion/badge_form.html", {'form': form})
+
+    data['volunteer'] = data['ticket'].find("Volunteer") >= 0
+
+    if 'Specialist Day Only' in data['ticket']:
+        data['ticket'] = 'Friday Only'
+        data['friday'] = True
+
+    if 'Conference Organiser' in data['ticket']:
+        data['ticket'] = ''
+
+    if 'Conference Volunteer' in data['ticket']:
+        data['ticket'] = ''
+
+    data['promote_company'] = (
+        data['organiser'] or data['volunteer'] or data['speaker'] or
+        'Sponsor' in data['ticket'] or
+        'Contributor' in data['ticket'] or
+        'Professional' in data['ticket']
+    )
+
+    return data
+
+
+@user_passes_test(_staff_only)
+def badger(request, username=None):
+    '''
+    Renders a single user's badge from data supplied on
+    a form rather than from Attendee data.
+
+    If *username* is provided in the URL, an attempt
+    will be made to look up this user and fill in the
+    badge details from the User and Attendee records.
+    '''
+
+    if username is not None:
+
+        # We have a username.  Try to populate our badge data
+        # from User/Attendee model.
+        try:
+            data = collate({'usernames': [username,]}).next()
+        except: # No matching User record (probably) ... just put up a blank form
+            return render(request, "registrasion/badge_form.html", {'form': BadgeForm})
+    else:
+        form = BadgeForm(request.POST)
+
+        if len(form.data) == 0:  # Empty or request to put up the form.
+            return render(request, "registrasion/badge_form.html", {'form': BadgeForm})
+
+        if not form.is_valid():  # Something's buggered ...
+            return render(request, "registrasion/badge_form.html", {'form': form})
+
+        data = collate_from_form(form)
+
+    orig = etree.parse(_get_badge_template_name())
+    tree = deepcopy(orig)
+    root = tree.getroot()
+
+
+    # Generate the badge (svg)
+    svg_badge(root, data, 0)
+
+    # Ship it back to the user...
+    response = HttpResponse(etree.tostring(root))
+
+    response["Content-Type"] = "image/svg+xml"
+    response["Content-Disposition"] = 'inline; filename="badge.svg"'
+    return response
