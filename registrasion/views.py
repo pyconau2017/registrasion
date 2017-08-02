@@ -1155,29 +1155,12 @@ def badges(request):
     return render(request, "registrasion/badges.html", data)
 
 
-@user_passes_test(_staff_only)
-def badger(request):
+def collate_from_form(form):
     '''
-    Renders a single user's badge from data supplied on
-    a form rather than from Attendee data.  This is nearly
-    identical to what Richard Jones' ``collate`` function does,
-    but with form data instead of Attendee data.
+    Does what collate does, but using form data as its input source
+    rather than User record.
     '''
-
-    form = BadgeForm(request.POST)
-
-    if len(form.data) == 0:
-        return render(request, "registrasion/badge_form.html", {'form': BadgeForm})
-
-    if not form.is_valid():
-       return render(request, "registrasion/badge_form.html", {'form': form})
-
-    orig = etree.parse(_get_badge_template_name())
-    tree = deepcopy(orig)
-    root = tree.getroot()
-
-
-    # Build the thing we'll pass to svg_badge() later.
+        # Build the thing we'll pass to svg_badge() later.
     data = dict()
 
     # Get the name bits ...
@@ -1234,6 +1217,42 @@ def badger(request):
         'Contributor' in data['ticket'] or
         'Professional' in data['ticket']
     )
+
+    return data
+
+
+@user_passes_test(_staff_only)
+def badger(request, username=None):
+    '''
+    Renders a single user's badge from data supplied on
+    a form rather than from Attendee data.
+
+    If *username* is provided in the URL, an attempt
+    will be made to look up this user and fill in the
+    badge details from the User and Attendee records.
+    '''
+
+    if username is not None:
+        print username
+        try:
+            data = collate({'usernames': [username,]}).next()
+        except:
+            return render(request, "registrasion/badge_form.html", {'form': BadgeForm})
+    else:
+        form = BadgeForm(request.POST)
+
+        if len(form.data) == 0:
+            return render(request, "registrasion/badge_form.html", {'form': BadgeForm})
+
+        if not form.is_valid():
+            return render(request, "registrasion/badge_form.html", {'form': form})
+
+        data = collate_from_form(form)
+
+    orig = etree.parse(_get_badge_template_name())
+    tree = deepcopy(orig)
+    root = tree.getroot()
+
 
     # Generate the badge (svg)
     svg_badge(root, data, 0)
