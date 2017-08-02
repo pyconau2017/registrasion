@@ -1233,18 +1233,20 @@ def badger(request, username=None):
     '''
 
     if username is not None:
-        print username
+
+        # We have a username.  Try to populate our badge data
+        # from User/Attendee model.
         try:
             data = collate({'usernames': [username,]}).next()
-        except:
+        except: # No matching User record (probably) ... just put up a blank form
             return render(request, "registrasion/badge_form.html", {'form': BadgeForm})
     else:
         form = BadgeForm(request.POST)
 
-        if len(form.data) == 0:
+        if len(form.data) == 0:  # Empty or request to put up the form.
             return render(request, "registrasion/badge_form.html", {'form': BadgeForm})
 
-        if not form.is_valid():
+        if not form.is_valid():  # Something's buggered ...
             return render(request, "registrasion/badge_form.html", {'form': form})
 
         data = collate_from_form(form)
