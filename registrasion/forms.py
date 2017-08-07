@@ -523,9 +523,24 @@ class InvoiceEmailForm(InvoicesWithProductAndStatusForm):
     )
 
 
+from registrasion.contrib.badger import InvalidTicketChoiceError
 
 def ticket_selection():
-   return list(enumerate(['!!! NOT A VALID TICKET !!!'] + [p.name for p in inventory.Product.objects.filter(category__name__contains="Ticket").exclude(name__contains="Organiser").order_by('id')]))
+   return list(enumerate(['!!! NOT A VALID TICKET !!!'] + \
+                         [p.name for p in inventory.Product.objects.\
+                            filter(category__name__contains="Ticket").\
+                            exclude(name__contains="Organiser").order_by('id')]))
+
+
+class TicketSelectionField(forms.ChoiceField):
+
+    def validate(self, value):
+        super(TicketSelectionField, self).validate(value)
+
+        result = int(self.to_python(value))
+        if result <= 0 or result > len(list(self.choices)):
+            raise InvalidTicketChoiceError()
+
 
 
 class BadgeForm(forms.Form):
@@ -540,7 +555,7 @@ class BadgeForm(forms.Form):
     free_text_1 = forms.CharField(label="Free Text", max_length=60, required=False)
     free_text_2 = forms.CharField(label="Free Text", max_length=60, required=False)
 
-    ticket = forms.ChoiceField(label="Select a Ticket", choices=ticket_selection)
+    ticket = TicketSelectionField(label="Select a Ticket", choices=ticket_selection)
 
     paid = forms.BooleanField(label="Paid", required=False)
     over18 = forms.BooleanField(label="Over 18", required=False)

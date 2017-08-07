@@ -37,8 +37,11 @@ from lxml import etree
 from copy import deepcopy
 
 from registrasion.forms import BadgeForm, ticket_selection
-from registrasion.generate_badges import *
-
+from registrasion.contrib.badger import (
+                                         collate,
+                                         svg_badge,
+                                         InvalidTicketChoiceError
+                                         )
 
 
 _GuidedRegistrationSection = namedtuple(
@@ -1087,7 +1090,8 @@ def invoice_mailout(request):
     return render(request, "registrasion/invoice_mailout.html", data)
 
 def _get_badge_template_name():
-    return os.path.join(settings.PROJECT_ROOT, 'pinaxcon', 'templates', 'badge.svg')
+    return os.path.join(settings.PROJECT_ROOT, 'pinaxcon', 'templates',
+                        settings.BADGER_DEFAULT_SVG)
 
 @user_passes_test(_staff_only)
 def badge(request, user_id):
@@ -1118,7 +1122,7 @@ def badge(request, user_id):
 
 def badges(request):
     '''
-    *** NOT USED FOR PYCONAU 2017 MELBOURNE ***
+    *** NOT USED FOR PYCONAU 2017 MELBOURNE  (I.e., not supported in badger module.) ***
 
     Either displays a form containing a list of users with badges to
     render, or returns a .zip file containing their badges. '''
@@ -1192,12 +1196,11 @@ def collate_from_form(form):
                 'sprints', 'company',]:
         data[key] = form.data.get(key, False)
 
+    # This will throw InvalidTicketChoiceError if the ticket
+    # choice isn't found in the ticket list or is the
+    # "Plese select a valid tickt" choice.  (I.e., they forgot
+    # to choose a ticket.)
     data['ticket'] = ticket_selection()[int(form.data['ticket'])][1]
-
-    # Make sure this is a valid ticket!
-    if data['ticket'].find("!!!") >= 0:
-        form.add_error('ticket', 'Please select a VALID ticket type!')
-        return render(request, "registrasion/badge_form.html", {'form': form})
 
     data['volunteer'] = data['ticket'].find("Volunteer") >= 0
 
@@ -1239,18 +1242,28 @@ def badger(request, username=None):
         try:
             data = collate({'usernames': [username,]}).next()
         except: # No matching User record (probably) ... just put up a blank form
-            return render(request, "registrasion/badge_form.html", {'form': BadgeForm})
+            return render(request, settings.BADGER_DEFAULT_FORM, {'form': BadgeForm})
     else:
         form = BadgeForm(request.POST)
 
         if len(form.data) == 0:  # Empty or request to put up the form.
-            return render(request, "registrasion/badge_form.html", {'form': BadgeForm})
+            return render(request, settings.BADGER_DEFAULT_FORM, {'form': BadgeForm})
 
-        if not form.is_valid():  # Something's buggered ...
-            return render(request, "registrasion/badge_form.html", {'form': form})
+        try:
+            if form.is_valid():
+               data = collate_from_form(form)
 
-        data = collate_from_form(form)
+        except InvalidTicketChoiceError:
+            form.add_error('ticket', 'Please select a VALID ticket type!')
+            return render(request, settings.BADGER_DEFAULT_FORM, {'form': form})
 
+        except TypeError as e:
+            form.add_error(e.message)
+            return render(request, settings.BADGER_DEFAULT_FORM, {'form': form})
+
+
+    # We should have valid data if we get this far.
+    # Fill in the template and return the resulting SVG object.
     orig = etree.parse(_get_badge_template_name())
     tree = deepcopy(orig)
     root = tree.getroot()
