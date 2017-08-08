@@ -19,7 +19,6 @@ from lxml import etree
 import tempfile
 from copy import deepcopy
 import subprocess
-import progressbar
 
 import pdb
 
@@ -244,7 +243,7 @@ def collate(options):
             data['firstname'] = at_nm[0]
             data['lastname'] = ' '.join(at_nm[1:])
         else:
-            print "ERROR:", ap.attendee.user, 'has no name'
+            print ("ERROR:", ap.attendee.user, 'has no name')
             continue
 
         data['line1'] = ap.free_text_1
@@ -288,11 +287,11 @@ def collate(options):
                 product__category__name__startswith="T-Shirt"))
 
         if not data['paid']:
-            print "INFO:", ap.attendee.user, 'not paid!'
+            print ("INFO:", ap.attendee.user, 'not paid!')
             continue
 
         if not data['ticket'] and not (data['friday'] or data['tutorial']):
-            print "ERROR:", ap.attendee.user, 'no conference ticket!'
+            print ("ERROR:", ap.attendee.user, 'no conference ticket!')
             continue
 
         data['company'] = overrides.get(ap.company, ap.company).strip()
@@ -336,11 +335,11 @@ def generate_stats(options):
     stats['company'].sort()
 
     for l, s in stats['firstname']:
-        print '%2d %s' % (l, s)
+        print ('%2d %s' % (l, s))
     for l, s in stats['lastname']:
-        print '%2d %s' % (l, s)
+        print ('%2d %s' % (l, s))
     for l, s in stats['company']:
-        print '%2d %s' % (l, s)
+        print ('%2d %s' % (l, s))
 
 
 def generate_badges(options):
@@ -366,21 +365,6 @@ def generate_badges(options):
         tree.write(name)
         names.append(name)
 
-    # progress = progressbar.ProgressBar(widgets=[progressbar.FormatLabel(
-    #     'Pages: %(value)s/%(max)s '
-    # )])
-    # for name in progress(names):
-    #     subprocess.check_call(
-    #         ['inkscape', '-z', '-C',
-    #          '--export-pdf=%s.pdf' % name,
-    #          '--file=' + name])
-    #
-    # output = os.path.join(options['out_dir'], 'all-badges.pdf')
-    # print 'Assembling: %s' % (output)
-    #
-    # subprocess.check_call(
-    #     ['pdftk'] + ['%s.pdf' % n for n in names] + ['cat', 'output', output])
-    #
     return 0
 
 class InvalidTicketChoiceError(Exception):

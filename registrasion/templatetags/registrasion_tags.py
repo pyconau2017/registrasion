@@ -5,7 +5,7 @@ from registrasion.controllers.item import ItemController
 from django import template
 from django.conf import settings
 from django.db.models import Sum
-from urllib import urlencode  # TODO: s/urllib/six.moves.urllib/
+#from urllib import urlencode  # TODO: s/urllib/six.moves.urllib/
 
 from operator import attrgetter
 
@@ -115,7 +115,7 @@ def report_as_csv(context, section):
 
     old_query = context.request.META["QUERY_STRING"]
     query = dict([("section", section), ("content_type", "text/csv")])
-    querystring = urlencode(query)
+    querystring = query  #urlencode(query)
 
     if old_query:
         querystring = old_query + "&" + querystring
