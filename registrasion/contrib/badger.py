@@ -146,6 +146,14 @@ def svg_badge(soup, data, n):
     '''
     Do the actual "heavy lifting" to create the badge SVG
     '''
+
+    # Python2/3 compat ...
+    try:
+        xx = filter(None, [1, 2, None, 3])[2]
+        filter_None = lambda lst: filter(None, lst)
+    except (TypeError,):
+        filter_None = lambda lst: list(filter(None, lst))
+
     side = 'lr'[n]
     for tb in 'tb':
         part = tb + side
@@ -153,7 +161,7 @@ def svg_badge(soup, data, n):
         if data['promote_company']:
             lines.append(data['company'])
         lines.extend([data['line1'], data['line2']])
-        lines = filter(None, lines)[:4]
+        lines = filter_None(lines)[:4]
 
         lines.extend('' for n in range(4-len(lines)))
         prev = 9999
